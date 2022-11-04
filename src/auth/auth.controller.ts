@@ -9,7 +9,7 @@ export class AuthController {
   constructor(private authService: AuthService) {}
   @UseGuards(AuthGuard('local'))
   @Post('/login')
-  @ApiOperation({ summary: 'User Registration' })
+  @ApiOperation({ summary: 'User Login' })
   @ApiBody({
     schema: {
       type: 'object',

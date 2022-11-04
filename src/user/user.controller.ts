@@ -4,22 +4,34 @@ import {
   Get,
   Post,
   Body,
-  Param,
   Delete,
   Put,
-  Req,
-  ParseIntPipe,
+  Request,
+  UploadedFile,
+  ParseFilePipeBuilder,
+  UseInterceptors,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { Express } from 'express';
+import { multerOptions } from '../config/multer.config';
+import {
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiTags,
+  ApiBearerAuth,
+  ApiConsumes,
+} from '@nestjs/swagger';
 
 import {
   CreateUserDto,
   ChangePasswordDto,
   UpdateUserDto,
   ForgetPasswordDto,
+  ResetPasswordDto,
 } from './dto/user.dto';
 import { UserService } from './user.service';
-import { ApiOperation, ApiResponse, ApiBody, ApiParam,ApiTags,ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('User')
 @ApiBearerAuth()
@@ -27,61 +39,59 @@ import { ApiOperation, ApiResponse, ApiBody, ApiParam,ApiTags,ApiBearerAuth } fr
 export class UserController {
   constructor(private userService: UserService) {}
 
+  //Signup-User
   @Post('/signup')
+  @UseInterceptors(FileInterceptor('file', multerOptions))
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'User Registration' })
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
-        id: {
-          type: 'integer',
-          example: 1,
-          description: 'this is unique id',
-        },
         fullName: {
           type: 'string',
           example: 'john deo',
-          description: 'this is user full name',
+          description: 'This is user full name',
         },
         email: {
           type: 'string',
           example: 'johndeo@gmail.com',
-          description: 'this is user email id',
+          description: 'This is user email id',
         },
         password: {
           type: 'string',
           example: 'johndeo@gmail.com',
-          description: 'this is user password',
+          description: 'This is user password',
         },
         confirmPassword: {
           type: 'string',
           example: 'johndeo@gmail.com',
-          description: 'confirm password of user',
+          description: 'Confirm password of user',
         },
         gender: {
-          type: 'enum',
-          example: 'Female',
+          enum: ['Male', 'Female', 'Other', ''],
+          example: ['Male', 'Female', 'Other'],
           description: 'Gender for user',
         },
         userName: {
           type: 'string',
           example: 'joe123',
-          description: 'this is user name of user',
+          description: 'This is user name of user',
         },
         billingAddress: {
           type: 'string',
           example: '91/b newyork, USA',
-          description: 'this is user biling address',
+          description: 'This is user biling address',
         },
         shippingAddress: {
           type: 'string',
           example: '91/a london, uk',
-          description: 'this is user shipping address',
+          description: 'This is user shipping address',
         },
-        profileImage: {
+        file: {
           type: 'string',
-          example: 'banner.jpg',
-          description: 'this is user profile',
+          format: 'binary',
+          description: 'User Profile',
         },
       },
     },
@@ -90,10 +100,11 @@ export class UserController {
   @ApiResponse({ status: 409, description: 'User already exists!!' })
   @ApiResponse({ status: 403, description: 'forbidden' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  store(@Body() createUserDto: CreateUserDto) {
-    return this.userService.registration(createUserDto);
+  registration(@Body() createUserDto: CreateUserDto, @UploadedFile() file) {
+    return this.userService.registration(createUserDto, file);
   }
 
+  //Get-All-User
   @UseGuards(AuthGuard('jwt'))
   @Get()
   @ApiOperation({ summary: 'Get All users!!' })
@@ -104,49 +115,36 @@ export class UserController {
     return this.userService.getAllUsers();
   }
 
+  //User-Profile
   @UseGuards(AuthGuard('jwt'))
-  @Get('/:userId')
+  @Get('/user-profile')
   @ApiOperation({ summary: 'User Profile!!' })
   @ApiResponse({ status: 200, description: 'User Profile!!' })
   @ApiResponse({ status: 403, description: 'forbidden' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   @ApiResponse({ status: 404, description: 'User not found!!' })
-  @ApiParam({
-    name: 'userId',
-    type: 'integer',
-    description: 'enter unique id',
-    required: true,
-  })
-  getUserProfile(@Param('userId', ParseIntPipe) userId: number) {
-    return this.userService.getUserProfile(userId);
+  getUserProfile(@Request() req) {
+    return this.userService.getUserProfile(req);
   }
 
+  //Delete-User
   @UseGuards(AuthGuard('jwt'))
-  @Delete('/:userId')
+  @Delete()
   @ApiOperation({ summary: 'Delete user' })
-  @ApiParam({
-    name: 'userId',
-    type: 'integer',
-    description: 'enter unique id',
-    required: true,
-  })
   @ApiResponse({ status: 200, description: 'User deleted successfully!!' })
   @ApiResponse({ status: 403, description: 'forbidden' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   @ApiResponse({ status: 404, description: 'User not found!!' })
-  deleteUser(@Param('userId', ParseIntPipe) userId: number) {
-    return this.userService.deleteUser(userId);
+  deleteUser(@Request() req) {
+    return this.userService.deleteUser(req);
   }
 
+  //Update-Profile
   @UseGuards(AuthGuard('jwt'))
-  @Put('/:userId')
+  @Put('/')
+  @UseInterceptors(FileInterceptor('file', multerOptions))
   @ApiOperation({ summary: 'Profile update' })
-  @ApiParam({
-    name: 'userId',
-    type: 'integer',
-    description: 'enter unique id',
-    required: true,
-  })
+  @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
       type: 'object',
@@ -154,42 +152,42 @@ export class UserController {
         fullName: {
           type: 'string',
           example: 'john deo',
-          description: 'this is user full name',
+          description: 'This is user full name',
         },
         password: {
           type: 'string',
           example: 'johndeo@gmail.com',
-          description: 'this is user email id',
+          description: 'This is user password',
         },
         confirmPassword: {
           type: 'string',
           example: 'johndeo@gmail.com',
-          description: 'this is user email id',
+          description: 'Confirm password',
         },
         gender: {
-          type: 'string',
-          example: 'johndeo@gmail.com',
-          description: 'this is user email id',
+          enum: ['Male', 'Female', 'Other'],
+          example: ['Male', 'Female', 'Other'],
+          description: 'User Gender',
         },
         userName: {
           type: 'string',
           example: 'joe123',
-          description: 'this is user name of user',
+          description: 'This is username',
         },
         billingAddress: {
           type: 'string',
           example: '91/b newyork, USA',
-          description: 'this is user biling address',
+          description: 'Biling address of user',
         },
         shippingAddress: {
           type: 'string',
           example: '91/a london, uk',
-          description: 'this is user shipping address',
+          description: 'This is user shipping address',
         },
-        profileImage: {
+        file: {
           type: 'string',
-          example: 'banner.jpg',
-          description: 'this is user profile',
+          format: 'binary',
+          description: 'User Profile',
         },
       },
     },
@@ -200,20 +198,16 @@ export class UserController {
   @ApiResponse({ status: 404, description: 'User not found!!' })
   updateProfile(
     @Body() updateUserDto: UpdateUserDto,
-    @Param('userId', ParseIntPipe) userId: number,
+    @Request() req,
+    @UploadedFile() file,
   ) {
-    return this.userService.updateProfile(updateUserDto, userId);
+    return this.userService.updateProfile(updateUserDto, req, file);
   }
 
+  //Change-Password
   @UseGuards(AuthGuard('jwt'))
-  @Put('/change-password/:userId')
-  @ApiOperation({ summary: 'Password change' })
-  @ApiParam({
-    name: 'userId',
-    type: 'integer',
-    description: 'enter unique id',
-    required: true,
-  })
+  @Put('/change-password')
+  @ApiOperation({ summary: 'Change Password' })
   @ApiBody({
     schema: {
       type: 'object',
@@ -226,7 +220,7 @@ export class UserController {
         newPassword: {
           type: 'string',
           example: 'johndeo@gmail.com',
-          description: 'this is user email id',
+          description: 'This is user email id',
         },
       },
     },
@@ -235,13 +229,11 @@ export class UserController {
   @ApiResponse({ status: 403, description: 'forbidden' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   @ApiResponse({ status: 404, description: 'User not found!!' })
-  changePassword(
-    @Body() changePasswordDto: ChangePasswordDto,
-    @Param('userId', ParseIntPipe) userId: number,
-  ) {
-    return this.userService.changePassword(changePasswordDto, userId);
+  changePassword(@Body() changePasswordDto: ChangePasswordDto, @Request() req) {
+    return this.userService.changePassword(changePasswordDto, req);
   }
 
+  //Forget-Password
   @Post('/forget-password')
   @ApiOperation({ summary: 'Forgot Password' })
   @ApiBody({
@@ -251,7 +243,7 @@ export class UserController {
         email: {
           type: 'string',
           example: 'johndeo@123JOE',
-          description: 'this is user email',
+          description: 'This is user email',
         },
       },
     },
@@ -262,5 +254,71 @@ export class UserController {
   @ApiResponse({ status: 404, description: 'User not found!!' })
   forgetPassword(@Body() forgetPasswordDto: ForgetPasswordDto) {
     return this.userService.forgetPassword(forgetPasswordDto);
+  }
+
+  //Reset-Password
+  @Post('/reset-password')
+  @ApiOperation({ summary: 'Reset Password' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        email: {
+          type: 'string',
+          example: 'johndeo@123JOE',
+          description: 'This is user email',
+        },
+        verifyToken: {
+          type: 'string',
+          example: '@##dfg$$fh$%$jnfjdnjn32222222nasdjnn@#$$$($(990jnfgffjnhnE',
+          description: 'VerifyToken for validate user',
+        },
+        password: {
+          type: 'string',
+          example: 'johndeo@123JOE',
+          description: 'This is user password',
+        },
+        confirmPassword: {
+          type: 'string',
+          example: 'johndeo@123JOE',
+          description: 'Confirm password for user',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Password reset successfully' })
+  @ApiResponse({ status: 403, description: 'forbidden' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  @ApiResponse({ status: 404, description: 'User not found!!' })
+  resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return this.userService.resetPassword(resetPasswordDto);
+  }
+
+  //Verify
+  @Post('/verify')
+  @ApiOperation({ summary: 'Verify User for reset password' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        email: {
+          type: 'string',
+          example: 'johndeo@123JOE',
+          description: 'This is user email',
+        },
+        verifyToken: {
+          type: 'string',
+          example: '@##dfg$$fh$%$jnfjdnjn32222222nasdjnn@#$$$($(990jnfgffjnhnE',
+          description: 'VerifyToken for validate user',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Please verify details!!' })
+  @ApiResponse({ status: 403, description: 'forbidden' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  @ApiResponse({ status: 404, description: 'User not found!!' })
+  verifyLink(@Body() forgetPasswordDto: ForgetPasswordDto) {
+    return this.userService.verifyLink(forgetPasswordDto);
   }
 }

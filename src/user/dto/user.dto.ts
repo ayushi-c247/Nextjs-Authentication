@@ -82,3 +82,17 @@ export class ForgetPasswordDto {
     @IsOptional()
     verifyToken:string;
 }
+export class ResetPasswordDto{
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+  @IsString()
+  @IsNotEmpty()
+  verifyToken:string;
+  @IsString()
+  @IsNotEmpty()
+  password:string;
+  @IsString()
+  @IsNotEmpty()
+  confirmPassword:string;
+}
